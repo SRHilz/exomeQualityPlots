@@ -53,7 +53,7 @@ for locus in loci:
 dirPath = sys.argv[1]
 i = 0 #will be index for files
 for file in os.listdir(dirPath):
-    if fnmatch.fnmatch(file, '*.bam'):
+    if fnmatch.fnmatch(file, '*.bwa.realigned.rmDups.recal.bam'):
         print file
         samfile = pysam.Samfile(dirPath+'/'+file,'rb')
         sampleID = file.split('.')[0]
