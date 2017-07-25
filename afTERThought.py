@@ -53,10 +53,11 @@ for locus in loci:
 dirPath = sys.argv[1]
 i = 0 #will be index for files
 for file in os.listdir(dirPath):
-    if fnmatch.fnmatch(file, '*.bwa.realigned.rmDups.recal.bam'):
+    if fnmatch.fnmatch(file, '*.bam.bai'):
         print file
-        samfile = pysam.Samfile(dirPath+'/'+file,'rb')
-        sampleID = file.split('.')[0]
+        bamfile = file.replace('.bai','')
+        samfile = pysam.Samfile(dirPath+'/'+bamfile,'rb')
+        sampleID = bamfile.split('.')[0]
         for locus in loci:
             for base in bases:
                 counts[locus][base][sampleID] = 0
