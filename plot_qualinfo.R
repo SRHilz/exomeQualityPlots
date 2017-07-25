@@ -121,190 +121,190 @@ mutationdata$mqflag <- NA #a value of 0 indicates that there was at least one li
 
 #VARIANT QUALITY DISTRIBUTION PLOTS
 # create output dir
-dir.create(paste(patientID,'_qualplots/variantQuality',sep=''), showWarnings <- FALSE)
-data_filtered <- data[which(data$V1>=qual_cutoff & data$V2>=mqual_cutoff),]
-data_collapsed_strand <- count(data_filtered[,3:6], vars = c("V3","V4","V5","V6"))
-data_collapsed_orientation <- count(data_filtered[,3:7], vars = c("V3","V4","V5","V6","V7"))
-# create additional collapsed forms of data (counts of alt and ref for each vairant + sample)
-data_allcounts <- count(data[,3:5], vars = c("V3","V4","V5"))
-data_highqualcounts <- count(data_filtered[,3:5], vars = c("V3","V4","V5"))
-
-# set plot parameters
-plot_nrows = 4
-if(length(samples)%%4 == 0){
-  plot_ncols = length(samples)/4
-} else {plot_ncols = floor(length(samples)/4)+1}
-#plot
-for (i in 1:length(variants)){
-  allaltcounts <- 0
-  pdf(paste(patientID,"_qualplots/variantQuality/",variants[i],".pdf", sep=""))
-  par(mfrow=c(plot_nrows, plot_ncols),mar=rep(2,4))
-  for (j in 1:length(samples)){
-    plot(1, type="n", xlab="", ylab="",  xlim=c(0,70), ylim=c(0, .5), main=samples[j])
-    if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
-      refqual <- data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1
-      refmqual <- data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V2
-      lines(density(refqual), col='firebrick', lty=1)
-      lines(density(refmqual), col='blue',lty=1)
-    }
-    if (length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
-      altqual <- data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1
-      altmqual <- data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V2
-      lines(density(altqual), col='plum1',lty=1)
-      lines(density(altmqual), col='deepskyblue',lty=1)
-    }
-    if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
-      p <- wilcox.test(refqual,altqual)$p.value
-      qualpvalue <- paste('qual p=', round(p,3), sep='')
-      if(is.na(mutationdata[variants[i],]$qflag) & is.finite(p)){
-        if(p<0.05){#flag
-          mutationdata[variants[i],]$qflag = 1
-        } else {#mark as okay
-          mutationdata[variants[i],]$qflag = 0
-        }
-      } else if(!is.na(mutationdata[variants[i],]$qflag) & is.finite(p)){
-        if(p>=0.05){#if already flagged, but we find a library without a difference between variant and ref scores, remove flag
-          mutationdata[variants[i],]$qflag = 0
-        }
+if (length(variants) <= 300){#this makes sure this section of code, which is computationally costly for lots of variants, is not executed for hypermutators
+  dir.create(paste(patientID,'_qualplots/variantQuality',sep=''), showWarnings <- FALSE)
+  data_filtered <- data[which(data$V1>=qual_cutoff & data$V2>=mqual_cutoff),]
+  data_collapsed_strand <- count(data_filtered[,3:6], vars = c("V3","V4","V5","V6"))
+  data_collapsed_orientation <- count(data_filtered[,3:7], vars = c("V3","V4","V5","V6","V7"))
+  # create additional collapsed forms of data (counts of alt and ref for each vairant + sample)
+  data_allcounts <- count(data[,3:5], vars = c("V3","V4","V5"))
+  data_highqualcounts <- count(data_filtered[,3:5], vars = c("V3","V4","V5"))
+  
+  # set plot parameters
+  plot_nrows = 4
+  if(length(samples)%%4 == 0){
+    plot_ncols = length(samples)/4
+  } else {plot_ncols = floor(length(samples)/4)+1}
+  #plot
+  for (i in 1:length(variants)){
+    allaltcounts <- 0
+    pdf(paste(patientID,"_qualplots/variantQuality/",variants[i],".pdf", sep=""))
+    par(mfrow=c(plot_nrows, plot_ncols),mar=rep(2,4))
+    for (j in 1:length(samples)){
+      plot(1, type="n", xlab="", ylab="",  xlim=c(0,70), ylim=c(0, .5), main=samples[j])
+      if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
+        refqual <- data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1
+        refmqual <- data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V2
+        lines(density(refqual), col='firebrick', lty=1)
+        lines(density(refmqual), col='blue',lty=1)
       }
-    } else {
-      qualpvalue = 'NA'
-    }
-    if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V2)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V2)>1){
-      p = wilcox.test(refmqual, altmqual)$p.value
-      mqualpvalue <- paste('mqual p=', round(p,3), sep='')
-      if(is.na(mutationdata[variants[i],]$mqflag) & is.finite(p)){
-        if(p<0.05){#flag
-          mutationdata[variants[i],]$mqflag = 1
-        } else {#mark as okay
-          mutationdata[variants[i],]$mqflag = 0
-        }
-      } else if(!is.na(mutationdata[variants[i],]$mqflag) & is.finite(p)){
-        if(p>=0.05){#if already flagged, but we find a library without a difference between variant and ref scores, remove flag
-          mutationdata[variants[i],]$mqflag = 0
-        }
+      if (length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
+        altqual <- data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1
+        altmqual <- data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V2
+        lines(density(altqual), col='plum1',lty=1)
+        lines(density(altmqual), col='deepskyblue',lty=1)
       }
-    } else {
-      mqualpvalue <- 'NA'
-    }
-    refCount <- 0
-    altCount <- 0
-    refQCount <- 0
-    altQCount <- 0
-    if (length(data_allcounts[which(data_allcounts=='ref' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq) > 0){
-      refCount <- data_allcounts[which(data_allcounts=='ref' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq
-    }
-    if (length(data_allcounts[which(data_allcounts=='alt' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq) > 0){
-      altCount <- data_allcounts[which(data_allcounts=='alt' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq 
-    }
-    if (length(data_highqualcounts[which(data_highqualcounts=='ref' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq) > 0){
-    refQCount <- data_highqualcounts[which(data_highqualcounts=='ref' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq
-    }
-    if (length(data_highqualcounts[which(data_highqualcounts=='alt' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq) > 0){
-    altQCount <- data_highqualcounts[which(data_highqualcounts=='alt' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq
-    }
-    allaltcounts = allaltcounts + altQCount
-    text(-2,.49,paste(refCount,'/',altCount,' (',refQCount,'/',altQCount,')'), cex=.8, pos=4)
-    #compare strands for ref and alt
-    a <- 0 #+ ref
-    b <- 0 #+ alt
-    c <- 0 #- ref
-    d <- 0 #- alt
-    if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq) > 0){
-      a <- data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq
-    } 
-    if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq) > 0){
-      b <- data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq
-    }
-    if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq) > 0){
-      c <- data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq
-    } 
-    if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq) > 0){
-      d <- data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq
-    }
-    if (altQCount>4){
-      SBratio <- (b+1)/(d+1)
-      if(is.na(mutationdata[variants[i],]$SB)){
-        if (SBratio>=2 | SBratio<=.5){
-          mutationdata[variants[i],]$SB <- 1
-        } else {
-          mutationdata[variants[i],]$SB <- 0
+      if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
+        p <- wilcox.test(refqual,altqual)$p.value
+        qualpvalue <- paste('qual p=', round(p,3), sep='')
+        if(is.na(mutationdata[variants[i],]$qflag) & is.finite(p)){
+          if(p<0.05){#flag
+            mutationdata[variants[i],]$qflag = 1
+          } else {#mark as okay
+            mutationdata[variants[i],]$qflag = 0
+          }
+        } else if(!is.na(mutationdata[variants[i],]$qflag) & is.finite(p)){
+          if(p>=0.05){#if already flagged, but we find a library without a difference between variant and ref scores, remove flag
+            mutationdata[variants[i],]$qflag = 0
+          }
         }
-      } else if (!is.na(mutationdata[variants[i],]$SB)){
-        if (SBratio > .5 & SBratio < 2){
-          mutationdata[variants[i],]$SB <- 0
-        }
+      } else {
+        qualpvalue = 'NA'
       }
-    } else {
-      SBratio = NA
-    }
-    SB <- paste('(+|-) ref:',a,'|',c,'; alt',b,'|',d)
-    text(-2,.45,SB, cex=.8, pos=4)
-    #compare pair orientation for ref and alt
-    a <- 0 #ref F1
-    b <- 0 #alt F1
-    c <- 0 #ref F2
-    d <- 0 #alt F2
-    e <- 0 #ref R1
-    f <- 0 #alt R1
-    g <- 0 #ref R2
-    h <- 0 #alt R2
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq) > 0){
-      a <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq
-    } 
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq) > 0){
-      b <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq
-    }
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq) > 0){
-      c <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq
-    } 
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq) > 0){
-      d <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq
-    }
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq) > 0){
-      e <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq
-    } 
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq) > 0){
-      f <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq
-    }
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq) > 0){
-      g <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq
-    } 
-    if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq) > 0){
-      h <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq
-    }
-    refF1R2 <- a+g
-    altF1R2 <- b+h
-    refF2R1 <- c+e
-    altF2R1 <- d+f
-    if (altQCount>4){
-      OBratio <- (altF2R1+1)/(altF1R2+1)
-      if(is.na(mutationdata[variants[i],]$OB)){
-        if (OBratio>=2 | OBratio<=.5){
-          mutationdata[variants[i],]$OB <- 1
-        } else {
-          mutationdata[variants[i],]$OB <- 0
+      if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V2)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V2)>1){
+        p = wilcox.test(refmqual, altmqual)$p.value
+        mqualpvalue <- paste('mqual p=', round(p,3), sep='')
+        if(is.na(mutationdata[variants[i],]$mqflag) & is.finite(p)){
+          if(p<0.05){#flag
+            mutationdata[variants[i],]$mqflag = 1
+          } else {#mark as okay
+            mutationdata[variants[i],]$mqflag = 0
+          }
+        } else if(!is.na(mutationdata[variants[i],]$mqflag) & is.finite(p)){
+          if(p>=0.05){#if already flagged, but we find a library without a difference between variant and ref scores, remove flag
+            mutationdata[variants[i],]$mqflag = 0
+          }
         }
-      } else if (!is.na(mutationdata[variants[i],]$OB)){
-        if (OBratio > .5 & OBratio < 2){
-          mutationdata[variants[i],]$OB <- 0
-        }
+      } else {
+        mqualpvalue <- 'NA'
       }
-    } else {
-      OBratio = NA
+      refCount <- 0
+      altCount <- 0
+      refQCount <- 0
+      altQCount <- 0
+      if (length(data_allcounts[which(data_allcounts=='ref' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq) > 0){
+        refCount <- data_allcounts[which(data_allcounts=='ref' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq
+      }
+      if (length(data_allcounts[which(data_allcounts=='alt' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq) > 0){
+        altCount <- data_allcounts[which(data_allcounts=='alt' & data_allcounts$V4==samples[j] & data_allcounts$V5==variants[i]),]$freq 
+      }
+      if (length(data_highqualcounts[which(data_highqualcounts=='ref' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq) > 0){
+        refQCount <- data_highqualcounts[which(data_highqualcounts=='ref' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq
+      }
+      if (length(data_highqualcounts[which(data_highqualcounts=='alt' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq) > 0){
+        altQCount <- data_highqualcounts[which(data_highqualcounts=='alt' & data_highqualcounts$V4==samples[j] & data_highqualcounts$V5==variants[i]),]$freq
+      }
+      allaltcounts = allaltcounts + altQCount
+      text(-2,.49,paste(refCount,'/',altCount,' (',refQCount,'/',altQCount,')'), cex=.8, pos=4)
+      #compare strands for ref and alt
+      a <- 0 #+ ref
+      b <- 0 #+ alt
+      c <- 0 #- ref
+      d <- 0 #- alt
+      if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq) > 0){
+        a <- data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq
+      } 
+      if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq) > 0){
+        b <- data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='+'),]$freq
+      }
+      if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq) > 0){
+        c <- data_collapsed_strand[which(data_collapsed_strand$V3=='ref' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq
+      } 
+      if (length(data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq) > 0){
+        d <- data_collapsed_strand[which(data_collapsed_strand$V3=='alt' & data_collapsed_strand$V4==samples[j] & data_collapsed_strand$V5==variants[i] & data_collapsed_strand$V6=='-'),]$freq
+      }
+      if (altQCount>4){
+        SBratio <- (b+1)/(d+1)
+        if(is.na(mutationdata[variants[i],]$SB)){
+          if (SBratio>=2 | SBratio<=.5){
+            mutationdata[variants[i],]$SB <- 1
+          } else {
+            mutationdata[variants[i],]$SB <- 0
+          }
+        } else if (!is.na(mutationdata[variants[i],]$SB)){
+          if (SBratio > .5 & SBratio < 2){
+            mutationdata[variants[i],]$SB <- 0
+          }
+        }
+      } else {
+        SBratio = NA
+      }
+      SB <- paste('(+|-) ref:',a,'|',c,'; alt',b,'|',d)
+      text(-2,.45,SB, cex=.8, pos=4)
+      #compare pair orientation for ref and alt
+      a <- 0 #ref F1
+      b <- 0 #alt F1
+      c <- 0 #ref F2
+      d <- 0 #alt F2
+      e <- 0 #ref R1
+      f <- 0 #alt R1
+      g <- 0 #ref R2
+      h <- 0 #alt R2
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq) > 0){
+        a <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq
+      } 
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq) > 0){
+        b <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==1),]$freq
+      }
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq) > 0){
+        c <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq
+      } 
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq) > 0){
+        d <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='+' & data_collapsed_orientation$V7==2),]$freq
+      }
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq) > 0){
+        e <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq
+      } 
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq) > 0){
+        f <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==1),]$freq
+      }
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq) > 0){
+        g <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='ref' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq
+      } 
+      if (length(data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq) > 0){
+        h <- data_collapsed_orientation[which(data_collapsed_orientation$V3=='alt' & data_collapsed_orientation$V4==samples[j] & data_collapsed_orientation$V5==variants[i] & data_collapsed_orientation$V6=='-' & data_collapsed_orientation$V7==2),]$freq
+      }
+      refF1R2 <- a+g
+      altF1R2 <- b+h
+      refF2R1 <- c+e
+      altF2R1 <- d+f
+      if (altQCount>4){
+        OBratio <- (altF2R1+1)/(altF1R2+1)
+        if(is.na(mutationdata[variants[i],]$OB)){
+          if (OBratio>=2 | OBratio<=.5){
+            mutationdata[variants[i],]$OB <- 1
+          } else {
+            mutationdata[variants[i],]$OB <- 0
+          }
+        } else if (!is.na(mutationdata[variants[i],]$OB)){
+          if (OBratio > .5 & OBratio < 2){
+            mutationdata[variants[i],]$OB <- 0
+          }
+        }
+      } else {
+        OBratio = NA
+      }
+      OB <- paste('(1|2) ref:',refF1R2,'|',refF2R1,'; alt',altF1R2,'|',altF2R1)
+      text(-2,.41,OB, cex=.8, pos=4)
+      text(-2,.37,qualpvalue, cex=.8, pos=4)
+      text(-2,.33,mqualpvalue, cex=.8, pos=4)
     }
-    OB <- paste('(1|2) ref:',refF1R2,'|',refF2R1,'; alt',altF1R2,'|',altF2R1)
-    text(-2,.41,OB, cex=.8, pos=4)
-    text(-2,.37,qualpvalue, cex=.8, pos=4)
-    text(-2,.33,mqualpvalue, cex=.8, pos=4)
+    if (allaltcounts < 4){
+      mutationdata[variants[i],]$fewalt = 1
+    }
+    dev.off()
   }
-  if (allaltcounts < 4){
-    mutationdata[variants[i],]$fewalt = 1
-  }
-  dev.off()
 }
-
-write.table(mutationdata,file=paste(patientID,'.R.mutation.MuTectOnly.Annotated.txt',sep=''),sep='\t', row.names=FALSE)
 # OVERALL LIBRARY QUALITY PLOTS
 
 #Overall library quality comparison - quality score
@@ -332,7 +332,7 @@ vafs <- getVAFs(data, samples, 20, 0)
 #Look at estimators of tumor purity and driver mutations (includes drivers of both LG and GBM)
 pdf(paste(patientID,"_qualplots/VAFPatterns/commondrivers.pdf", sep=""))
 library(dplyr)
-drivers <- c('EGFR_','TP53_','PTEN_','NF1_','IDH1_','IDH2_','CIC_','ATRX_','KRAS_','PIC3CA_','PTPRD_','RB1_','MDM2_','PIK3R1_','MSH','MLH','PMS')
+drivers <- c('EGFR_','TP53_','PTEN_','NF1_','IDH1_','IDH2_','CIC_','ATRX_','KRAS_','PIK3CA_','PTPRD_','RB1_','MDM2_','PIK3R1_','MSH','MLH','PMS')
 cols <- c('#696969',"#33A02C","#E31A1C","#1F78B4","#A6CEE3","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FB9A99","#B2DF8A","#FFFF99","#B15928",'#00F5FF','#556B2F','#7CFC00','#8B0A50','#000080','#FFC125','#D3D3D3')
 par(mfrow=c(1,1),mar=c(10,4,2,4))
 plot(seq(length(samples)),rep(0,length(samples)), las=2, ylim=c(0,1), col='white', ylab="VAF", xlab='', xaxt="n")
@@ -343,7 +343,7 @@ notFound <- c()
 while (i<=length(drivers)){
   matches <- variants[grep(drivers[i],variants)]
   if (length(matches)==0){
-    notFound <- append(notFound,substr(drivers[i],1,nchar(drivers[i])-1))
+    notFound <- append(notFound,gsub('_','',drivers[i]))
   }
   for (variantID in matches){
     variantLabels <- append(variantLabels, variantID)
@@ -355,7 +355,8 @@ while (i<=length(drivers)){
 }
 axis(1, at=seq(length(samples)),labels=samples, las=2)
 legend(1,1,variantLabels,lty=1,cex=.8,col=cols[1:length(variantLabels)],bty='n')
-text(0,0,labels=paste('Not present: ',paste(notFound,collapse=', '),sep=''),cex=.8, pos=4, offset=3)
+legend('topright',notFound,lty=1,cex=.8,col="white",bty='n', title="Not present:", y.intersp=.8)
+
 dev.off()
 #PCA
 pdf(paste(patientID,"_qualplots/VAFPatterns/pca.pdf", sep=""))
