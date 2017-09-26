@@ -353,10 +353,11 @@ while (i<=length(drivers)){
   }
   i = i+1
 }
-axis(1, at=seq(length(samples)),labels=samples, las=2)
-legend(1,1,variantLabels,lty=1,cex=.8,col=cols[1:length(variantLabels)],bty='n')
+if (!length(notFound) == length(drivers)){
+  axis(1, at=seq(length(samples)),labels=samples, las=2)
+  legend(1,1,variantLabels,lty=1,cex=.8,col=cols[1:length(variantLabels)],bty='n')
+}
 legend('topright',notFound,lty=1,cex=.8,col="white",bty='n', title="Not present:", y.intersp=.8)
-
 dev.off()
 #PCA
 pdf(paste(patientID,"_qualplots/VAFPatterns/pca.pdf", sep=""))
