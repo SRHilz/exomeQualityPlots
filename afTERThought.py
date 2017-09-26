@@ -58,6 +58,8 @@ for file in os.listdir(dirPath):
         bamfile = file.replace('.bai','')
         samfile = pysam.Samfile(dirPath+'/'+bamfile,'rb')
         sampleID = bamfile.split('.')[0]
+        if 'trim' in sampleID:#added 2017.09.26; specific for Batch16
+            sampleID = sampleID.replace('-trim','')
         for locus in loci:
             for base in bases:
                 counts[locus][base][sampleID] = 0
