@@ -103,7 +103,12 @@ def annotate_mutations_from_bam(mutfile, bamfile, sample, qualFile):
     h.append('%s_alt_Q20reads'%(sample))#; aQ = h.index('%s_Q20alt_reads'%(sample))
 
     ## prepare outfile
-    annofile = open(mutfile.split('/')[-1].split('.txt')[0] + '.%sQ.txt'%(sample), 'w')
+    annofileName = mutfile.split('/')[-1].split('.txt')[0] + '.%sQ.txt'%(sample)
+    annofileName = annofileName.replace('Primary','P') #this is necessary once you start having many samples per patient, as file names become too long
+    annofileName = annofileName.replace('Recurrence','R')
+    annofileName = annofileName.replace('Normal','N')
+    annofile = open(annofileName, 'w')
+
     annofile.write('\t'.join(h) + '\n')
 
     tmp_file_header = mutfile.split('/')[-1].split('.txt')[0] + '_' + sample
