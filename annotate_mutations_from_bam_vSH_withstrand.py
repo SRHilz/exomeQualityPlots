@@ -70,6 +70,9 @@ def get_samples_from_patient(mutfile, conversionfile, patient_ID, projectname, b
 
         annotate_mutations_from_bam(mutfile, bamfile, sample, qualFile)
         mutfile = mutfile.split('/')[-1].split('.txt')[0] + '.%sQ.txt'%(sample)
+        mutfile = mutfile.replace('Primary','P') #this is necessary once you start having many samples per patient, as file names become too long
+        mutfile = mutfile.replace('Recurrence','R')
+        mutfile = mutfile.replace('Normal','N')
         print mutfile
     qualFile.close()
 
