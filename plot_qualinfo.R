@@ -387,38 +387,39 @@ library(dplyr)
 library(dplyr)
 dir.create(paste(patientID,'_qualplots/variantSpectra',sep=''), showWarnings <- FALSE)
 # Visualization 1: By read
-detach("package:dplyr", unload=TRUE) #must be done as messes with plyr count function
-data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
-data_alt_filtered <- data_alt[which(data_alt$V1>=qual_cutoff & data_alt$V2>=mqual_cutoff),]
-data_alt_filtered <- data_alt_filtered[c(4,5)]
-colnames(data_alt_filtered) <- c('sample','variant')
-data_alt_filtered$variant <- lapply(data_alt_filtered$variant, as.character)
-for (i in 1:dim(data_alt_filtered)[1]){
-  data_alt_filtered[i,2] = extractMuts(as.character(data_alt_filtered[i,2]))
-}
-data_alt_filtered$variant <- as.factor(as.character(data_alt_filtered$variant))
-data_alt_filtered$variant <- factor(data_alt_filtered$variant, levels = c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A'))
-#plot as counts
-pdf(paste(patientID,"_qualplots/variantSpectra/allReads_counts.pdf", sep=""))
-data_alt_filtered <- count(data_alt_filtered, vars=c("sample", "variant"))
-ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = freq, fill = variant)) + 
-  labs(x="Sample",y="Read Counts") + 
-  geom_bar(stat="identity") + 
-  scale_fill_manual(values = substitutionsColorset) + 
-  scale_x_discrete(limits=samples) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
+if (length(variants) <= 300){
+  detach("package:dplyr", unload=TRUE) #must be done as messes with plyr count function
+  data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
+  data_alt_filtered <- data_alt[which(data_alt$V1>=qual_cutoff & data_alt$V2>=mqual_cutoff),]
+  data_alt_filtered <- data_alt_filtered[c(4,5)]
+  colnames(data_alt_filtered) <- c('sample','variant')
+  data_alt_filtered$variant <- lapply(data_alt_filtered$variant, as.character)
+  for (i in 1:dim(data_alt_filtered)[1]){
+    data_alt_filtered[i,2] = extractMuts(as.character(data_alt_filtered[i,2]))
+  }
+  data_alt_filtered$variant <- as.factor(as.character(data_alt_filtered$variant))
+  data_alt_filtered$variant <- factor(data_alt_filtered$variant, levels = c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A'))
+  #plot as counts
+  pdf(paste(patientID,"_qualplots/variantSpectra/allReads_counts.pdf", sep=""))
+  data_alt_filtered <- count(data_alt_filtered, vars=c("sample", "variant"))
+  ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = freq, fill = variant)) + 
+    labs(x="Sample",y="Read Counts") + 
+    geom_bar(stat="identity") + 
+    scale_fill_manual(values = substitutionsColorset) + 
+    scale_x_discrete(limits=samples) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
   dev.off()
-#plot as ratios
-pdf(paste(patientID,"_qualplots/variantSpectra/allReads_proportion.pdf", sep=""))
-data_alt_filtered <- ddply(data_alt_filtered, "sample", transform, ratio=getRatio(freq))
-ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = ratio, fill = variant)) + 
-  labs(x="Sample",y="Ratio") + 
-  geom_bar(stat="identity") + 
-  scale_fill_manual(values = substitutionsColorset) + 
-  scale_x_discrete(limits=samples) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
-dev.off()
-
+  #plot as ratios
+  pdf(paste(patientID,"_qualplots/variantSpectra/allReads_proportion.pdf", sep=""))
+  data_alt_filtered <- ddply(data_alt_filtered, "sample", transform, ratio=getRatio(freq))
+  ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = ratio, fill = variant)) + 
+    labs(x="Sample",y="Ratio") + 
+    geom_bar(stat="identity") + 
+    scale_fill_manual(values = substitutionsColorset) + 
+    scale_x_discrete(limits=samples) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
+  dev.off()
+}  
 # Visualization 2: As single variantal event
 data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
 collapse <- 1
