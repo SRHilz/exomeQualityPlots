@@ -62,11 +62,7 @@ getVAFs <- function(input, samples, qualCutoff, mqualCutoff){
       if (length(data_filtered[which(data_filtered$type == 'alt' & data_filtered$sample == samples[j] & data_filtered$variant == variantIDs[i]),]$freq) > 0){
         altCount <- data_filtered[which(data_filtered$type == 'alt' & data_filtered$sample == samples[j] & data_filtered$variant == variantIDs[i]),]$freq
       }
-      if (refCount==0){#in the rare case where there is also no ref read, we employ a psuedocount
-        variantVAFs <- append(variantVAFs, altCount/1)
-      } else{
       variantVAFs <- append(variantVAFs, altCount/(altCount + refCount))
-      }
     }
     VAFs_df <- rbind(VAFs_df, variantVAFs)# adds a row containing VAFs for all samples for that varient
   }
@@ -82,9 +78,10 @@ args = commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
   stop("Usage: Rscript --vanilla plot_qualinfo.R <patient ID> <path to quality info file> <path to mutations.R file>", call.=FALSE)
 }
-patientID <- args[1]
-qualinfofile <- args[2] #'/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Projects/2016_LoglioExomeAnalysis/Analysis_and_Results/Quality/Patient300_info.txt'#args[2]
-mutationsfile <- args[3] 
+patientID <- 'Patient278'#args[1] 
+qualinfofile <- paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.qualityinfo.txt')
+ #args[2] #
+mutationsfile <- paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.R.mutations.txt') #args[3] 
 
 # Hardcoded settings ordering mutational spectra output
 substitutions <- c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A')
@@ -333,6 +330,7 @@ vafs <- getVAFs(data, samples, 20, 0)
 pdf(paste(patientID,"_qualplots/VAFPatterns/commondrivers.pdf", sep=""))
 library(dplyr)
 drivers <- c('EGFR_','TP53_','PTEN_','NF1_','IDH1_','IDH2_','CIC_','ATRX_','KRAS_','PIK3CA_','PTPRD_','RB1_','MDM2_','PIK3R1_','MSH','MLH','PMS')
+banned <- c('IL12RB1','ZCRB1','GABRB1')
 cols <- c('#696969',"#33A02C","#E31A1C","#1F78B4","#A6CEE3","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FB9A99","#B2DF8A","#FFFF99","#B15928",'#00F5FF','#556B2F','#7CFC00','#8B0A50','#000080','#FFC125','#D3D3D3')
 par(mfrow=c(1,1),mar=c(10,4,2,4))
 plot(seq(length(samples)),rep(0,length(samples)), las=2, ylim=c(0,1), col='white', ylab="VAF", xlab='', xaxt="n")
@@ -342,6 +340,7 @@ variantLabels <- c()
 notFound <- c()
 while (i<=length(drivers)){
   matches <- variants[grep(drivers[i],variants)]
+  matches <- matches[!matches %in% banned]
   if (length(matches)==0){
     notFound <- append(notFound,gsub('_','',drivers[i]))
   }
@@ -385,7 +384,7 @@ library(dplyr)
 
 # variant SPECTRA PLOTTING
 library(dplyr)
-dir.create(paste(patientID,'_qualplots/variantSpectra',sep=''), showWarnings <- FALSE)
+dir.create(paste(patientID,'_qualplots/variantSpectraTest',sep=''), showWarnings <- FALSE)
 # Visualization 1: By read
 if (length(variants) <= 300){
   detach("package:dplyr", unload=TRUE) #must be done as messes with plyr count function
