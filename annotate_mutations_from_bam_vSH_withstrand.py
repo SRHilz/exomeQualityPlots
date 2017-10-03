@@ -32,14 +32,14 @@ def get_samples_from_patient(mutfile, conversionfile, patient_ID, projectname, b
     header = data[0]
     data = data[1:]
     ## parse header
-    h = header.strip().split()
+    h = header.strip().split('\t')
     col_pat = h.index("patient_ID")
     col_lib = h.index("lib_ID")
     col_st = h.index("sample_type")
     #col_bam = h.index("bam_file")
 
     ## pull out patient specific info
-    data_pat = filter(lambda x:x.strip().split()[col_pat] == patient_ID, data)
+    data_pat = filter(lambda x:x.strip().split('\t')[col_pat] == patient_ID, data)
 
     ## determine where files are stored
     #testID = data_pat[0].strip().split()[col_lib]
@@ -57,7 +57,7 @@ def get_samples_from_patient(mutfile, conversionfile, patient_ID, projectname, b
     qualFile = open(patient_ID+'.qualityinfo.tmp','w')
     for line in data_pat:
         print mutfile
-        sample = line.strip().split()[col_st]
+        sample = line.strip().split('\t')[col_st]
         print sample
 
         #if patient_ID == "Patient126" and    sample != "Normal":
@@ -65,7 +65,7 @@ def get_samples_from_patient(mutfile, conversionfile, patient_ID, projectname, b
         #    fileheader = ".merged.sorted"
 
         #bamfile = fullpath + line.strip().split()[col_lib] + fileheader + ".bam"
-        bamfile = bamPath+'/'+patient_ID+'/'+line.strip().split()[col_lib]+'-trim.bwa.realigned.rmDups.recal.bam'
+        bamfile = bamPath+'/'+patient_ID+'/'+line.strip().split('\t')[col_lib]+'-trim.bwa.realigned.rmDups.recal.bam'
         print bamfile
 
         annotate_mutations_from_bam(mutfile, bamfile, sample, qualFile)
