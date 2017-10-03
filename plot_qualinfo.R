@@ -78,10 +78,10 @@ args = commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
   stop("Usage: Rscript --vanilla plot_qualinfo.R <patient ID> <path to quality info file> <path to mutations.R file>", call.=FALSE)
 }
-patientID <- 'Patient278'#args[1] 
-qualinfofile <- paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.qualityinfo.txt')
- #args[2] #
-mutationsfile <- paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.R.mutations.txt') #args[3] 
+patientID <-args[1] 
+qualinfofile <-args[2]# paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.qualityinfo.txt')
+ # #
+mutationsfile <- args[3]#paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.R.mutations.txt') # 
 
 # Hardcoded settings ordering mutational spectra output
 substitutions <- c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A')
