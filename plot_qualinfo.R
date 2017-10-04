@@ -388,7 +388,7 @@ library(dplyr)
 
 # variant SPECTRA PLOTTING
 library(dplyr)
-dir.create(paste(patientID,'_qualplots/variantSpectraTest',sep=''), showWarnings <- FALSE)
+dir.create(paste(patientID,'_qualplots/variantSpectra',sep=''), showWarnings <- FALSE)
 # Visualization 1: By read
 if (length(variants) <= 300){
   detach("package:dplyr", unload=TRUE) #must be done as messes with plyr count function
