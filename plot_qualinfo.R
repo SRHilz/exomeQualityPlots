@@ -34,6 +34,11 @@ extractMuts <- function(variantID){
   return(mut)
 }
 
+makeLongID <- function(gene, contig, position,refBase, altBase){
+  longID <-paste(gene,'_',contig,'_',refBase,position,altBase, sep='')
+  return(longID)
+}
+
 getRatio <- function(x){
   toReturn <- x/sum(x)
   return(toReturn)
