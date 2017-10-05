@@ -39,36 +39,25 @@ getRatio <- function(x){
   return(toReturn)
 }
 
-getVAFs <- function(input, samples, qualCutoff, mqualCutoff){
-  detach("package:dplyr", unload=TRUE)
-  qual_cutoff <- qualCutoff
-  mqual_cutoff <- mqualCutoff
-  data_filtered <- input[which(input$V1>=qual_cutoff & input$V2>=mqual_cutoff),]
-  data_filtered$V1 <- NULL
-  data_filtered$V2 <- NULL
-  data_filtered$V6 <- NULL
-  colnames(data_filtered) <- c('type','sample','variant')
-  variantIDs <- unique(data_filtered$variant)
-  data_filtered <- count(data_filtered, vars = c("type","sample","variant"))
-  VAFs_df <- c()
-  for (i in 1:length(variantIDs)){
-    variantVAFs <- c()
-    for (j in 1:length(samples)){
-      refCount <- 0
-      altCount <- 0
-      if (length(data_filtered[which(data_filtered$type == 'ref' & data_filtered$sample == samples[j] & data_filtered$variant == variantIDs[i]),]$freq) > 0){
-        refCount <- data_filtered[which(data_filtered$type == 'ref' & data_filtered$sample == samples[j] & data_filtered$variant == variantIDs[i]),]$freq
-      }
-      if (length(data_filtered[which(data_filtered$type == 'alt' & data_filtered$sample == samples[j] & data_filtered$variant == variantIDs[i]),]$freq) > 0){
-        altCount <- data_filtered[which(data_filtered$type == 'alt' & data_filtered$sample == samples[j] & data_filtered$variant == variantIDs[i]),]$freq
-      }
-      variantVAFs <- append(variantVAFs, altCount/(altCount + refCount))
-    }
-    VAFs_df <- rbind(VAFs_df, variantVAFs)# adds a row containing VAFs for all samples for that varient
+getInfo <- function(df, samples){
+  subset <- df[which(df$algorithm=='MuTect'),]
+  n <- nrow(subset)
+  toReturn <- c()
+  for (name in samples){
+    ref <- subset[,paste0(name,'_ref_Q20reads')]
+    alt <- subset[,paste0(name,'_alt_Q20reads')]
+    coverage <- ref + alt
+    vaf <- alt/coverage
+    sampleID <- rep(name,n)
+    gene <- makeLongID(subset$gene,subset$contig,subset$position, subset$ref_allele, subset$alt_allele)
+    chunk <- cbind(sampleID,gene,coverage,vaf)
+    toReturn <- rbind(toReturn,chunk)
   }
-  colnames(VAFs_df) <- samples
-  rownames(VAFs_df) <- variantIDs
-  return (VAFs_df)
+  toReturn <- as.data.frame(toReturn, stringsAsFactors=F)
+  toReturn$coverage <- as.numeric(toReturn$coverage)
+  toReturn$vaf <- as.numeric(toReturn$vaf)
+  toReturn$sampleID <- as.factor(toReturn$sampleID)
+  return(toReturn)
 }
 
 # OVERALL SETUP and VARIABLE PARAMETERS
@@ -324,40 +313,52 @@ dev.off()
 
 #VAF PATTERNS and DRIVER PLOTs
 dir.create(paste(patientID,'_qualplots/VAFPatterns',sep=''), showWarnings <- FALSE)
-# calculate VAFs
-vafs <- getVAFs(data, samples, 20, 0)
+# read in data and get sample names
+mutationdata <- read.csv(mutationsfile,header=T, comment.char ='!', sep='\t', check.names=F)
+geneColumnIndex <- min(grep('gene',colnames(mutationdata)))
+colnames(mutationdata)[geneColumnIndex] <- 'gene'
+colnames(mutationdata) <- gsub('[.]','-',colnames(mutationdata))
+#get vafs and coverage
+info <- getInfo(mutationdata,samples)
+variants <- info$gene
 #Look at estimators of tumor purity and driver mutations (includes drivers of both LG and GBM)
 pdf(paste(patientID,"_qualplots/VAFPatterns/commondrivers.pdf", sep=""))
 library(dplyr)
 drivers <- c('EGFR_','TP53_','PTEN_','NF1_','IDH1_','IDH2_','CIC_','ATRX_','KRAS_','PIK3CA_','PTPRD_','RB1_','MDM2_','PIK3R1_','MSH','MLH','PMS')
-banned <- c('IL12RB1_','ZCRB1_','GABRB1_', 'KCNF1_', 'SERPINF1_','GABRB1_','CRB1_')
-cols <- c('#696969',"#33A02C","#E31A1C","#1F78B4","#A6CEE3","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FB9A99","#B2DF8A","#FFFF99","#B15928",'#00F5FF','#556B2F','#7CFC00','#8B0A50','#000080','#FFC125','#D3D3D3')
+banned <- c('IL12RB1_','ZCRB1_','GABRB1_', 'KCNF1_', 'SERPINF1_','GABRB1_','CRB1_','ARRB1_','KLRB1_','TMLHE_')
+cols <- c('#696969',"#33A02C","#E31A1C","#1F78B4","#A6CEE3","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FB9A99","#B2DF8A","#FFFF00","#B15928",'#00F5FF','#556B2F','#7CFC00','#8B0A50','#000080','#FFC125','#D3D3D3')
 par(mfrow=c(1,1),mar=c(10,4,2,4))
 plot(seq(length(samples)),rep(0,length(samples)), las=2, ylim=c(0,1), col='white', ylab="VAF", xlab='', xaxt="n")
-i = 1
-j = 1
+
 variantLabels <- c()
 notFound <- c()
-while (i<=length(drivers)){
-  potentialMatchIndexes <- grep(drivers[i],variants)
+for (gene in drivers){
+  print(gene)
+  potentialMatchIndexes <- grep(gene,variants)
   bannedMatchIndexes <- c()
   for (entry in banned){
     bannedMatchIndexes <- append(bannedMatchIndexes, grep(entry,variants))
   }
-  matches <- variants[!potentialMatchIndexes[potentialMatchIndexes %in% bannedMatchIndexes]]
+  matches <- unique(variants[potentialMatchIndexes[!potentialMatchIndexes %in% bannedMatchIndexes]])
+  print(matches)
   if (length(matches)==0){
-    notFound <- append(notFound,gsub('_','',drivers[i]))
+    notFound <- append(notFound,gsub('_','',gene))
   }
   for (variantID in matches){
     variantLabels <- append(variantLabels, variantID)
-    toPlot <- vafs[variantID,]%>% unlist
-    lines(toPlot, las=2, ylim=c(0,.5), col=cols[j], lty=1)
-    j = j+1
   }
-  i = i+1
 }
+
+for (i in seq_along(variantLabels)){
+  variantVAF <- c()
+  for (j in seq_along(samples)){
+    variantVAF <- append(variantVAF,info[which(info$gene==variantLabels[i] & info$sampleID==samples[j]),]$vaf)
+  }
+  lines(variantVAF, las=2, col=cols[i], lty=1)
+}
+
 if (!length(notFound) == length(drivers)){
-  axis(1, at=seq(length(samples)),labels=samples, las=2)
+  axis(1,at=seq(length(samples)), labels=samples, cex=.9, las=2)
   legend(1,1,variantLabels,lty=1,cex=.8,col=cols[1:length(variantLabels)],bty='n')
 }
 legend('topright',notFound,lty=1,cex=.8,col="white",bty='n', title="Not present:", y.intersp=.8)
@@ -388,10 +389,10 @@ library(dplyr)
 
 # variant SPECTRA PLOTTING
 library(dplyr)
+detach("package:dplyr", unload=TRUE) #must be done as messes with plyr count function
 dir.create(paste(patientID,'_qualplots/variantSpectra',sep=''), showWarnings <- FALSE)
 # Visualization 1: By read
 if (length(variants) <= 300){
-  detach("package:dplyr", unload=TRUE) #must be done as messes with plyr count function
   data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
   data_alt_filtered <- data_alt[which(data_alt$V1>=qual_cutoff & data_alt$V2>=mqual_cutoff),]
   data_alt_filtered <- data_alt_filtered[c(4,5)]
@@ -424,46 +425,48 @@ if (length(variants) <= 300){
   dev.off()
 }  
 # Visualization 2: As single variantal event
-data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
-collapse <- 1
-data_alt_filtered <- data_alt[which(data_alt$V1>=qual_cutoff & data_alt$V2>=mqual_cutoff),]
-data_alt_filtered <- data_alt_filtered[c(4,5)]
-colnames(data_alt_filtered) <- c('sample','variant')
-data_alt_filtered <- unique(data_alt_filtered)
-data_alt_filtered$variant <- lapply(data_alt_filtered$variant, as.character)
-for (i in 1:dim(data_alt_filtered)[1]){
-  data_alt_filtered[i,2] = extractMuts(as.character(data_alt_filtered[i,2]))
-}
-if (collapse == 1){
+if (length(variants) <= 300){
+  data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
+  collapse <- 1
+  data_alt_filtered <- data_alt[which(data_alt$V1>=qual_cutoff & data_alt$V2>=mqual_cutoff),]
+  data_alt_filtered <- data_alt_filtered[c(4,5)]
+  colnames(data_alt_filtered) <- c('sample','variant')
+  data_alt_filtered <- unique(data_alt_filtered)
+  data_alt_filtered$variant <- lapply(data_alt_filtered$variant, as.character)
   for (i in 1:dim(data_alt_filtered)[1]){
-    data_alt_filtered[i,2] = substitutions_grouping[which(substitutions %in% data_alt_filtered[i,2])]
+    data_alt_filtered[i,2] = extractMuts(as.character(data_alt_filtered[i,2]))
   }
-  data_alt_filtered$variant <- as.factor(as.character(data_alt_filtered$variant))
-  data_alt_filtered$variant <- factor(data_alt_filtered$variant, levels = unique(substitutions_grouping))
-} else{
-  data_alt_filtered$variant <- as.factor(as.character(data_alt_filtered$variant))
-  data_alt_filtered$variant <- factor(data_alt_filtered$variant, levels = substitutions) 
-}
-#plot as counts
-pdf(paste(patientID,"_qualplots/variantSpectra/allVariantsPresent_counts.pdf", sep=""))
-data_alt_filtered <- count(data_alt_filtered, vars = c("sample", "variant"))
-ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = freq, fill = variant)) + 
-  labs(x="Sample",y="Number of variants") + 
-  geom_bar(stat="identity") + 
-  scale_fill_manual(values = substitutionsGroupedColorset) + 
-  scale_x_discrete(limits=samples) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
+  if (collapse == 1){
+    for (i in 1:dim(data_alt_filtered)[1]){
+      data_alt_filtered[i,2] = substitutions_grouping[which(substitutions %in% data_alt_filtered[i,2])]
+    }
+    data_alt_filtered$variant <- as.factor(as.character(data_alt_filtered$variant))
+    data_alt_filtered$variant <- factor(data_alt_filtered$variant, levels = unique(substitutions_grouping))
+  } else{
+    data_alt_filtered$variant <- as.factor(as.character(data_alt_filtered$variant))
+    data_alt_filtered$variant <- factor(data_alt_filtered$variant, levels = substitutions) 
+  }
+  #plot as counts
+  pdf(paste(patientID,"_qualplots/variantSpectra/allVariantsPresent_counts.pdf", sep=""))
+  data_alt_filtered <- count(data_alt_filtered, vars = c("sample", "variant"))
+  ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = freq, fill = variant)) + 
+    labs(x="Sample",y="Number of variants") + 
+    geom_bar(stat="identity") + 
+    scale_fill_manual(values = substitutionsGroupedColorset) + 
+    scale_x_discrete(limits=samples) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
+    dev.off()
+  #plot as ratios
+  pdf(paste(patientID,"_qualplots/variantSpectra/allVariantsPresent_proportion.pdf", sep=""))
+  data_alt_filtered <- ddply(data_alt_filtered, "sample", transform, ratio=getRatio(freq))
+  ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = ratio, fill = variant)) + 
+    labs(x="Sample",y="Ratio") + 
+    geom_bar(stat="identity") + 
+    scale_fill_manual(values = substitutionsGroupedColorset) + 
+    scale_x_discrete(limits=samples) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
   dev.off()
-#plot as ratios
-pdf(paste(patientID,"_qualplots/variantSpectra/allVariantsPresent_proportion.pdf", sep=""))
-data_alt_filtered <- ddply(data_alt_filtered, "sample", transform, ratio=getRatio(freq))
-ggplot(data = data_alt_filtered[rev(order(data_alt_filtered$variant)),], aes(x = sample, y = ratio, fill = variant)) + 
-  labs(x="Sample",y="Ratio") + 
-  geom_bar(stat="identity") + 
-  scale_fill_manual(values = substitutionsGroupedColorset) + 
-  scale_x_discrete(limits=samples) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=20), axis.title = element_text(size = 20), axis.text.y = element_text(size=20), panel.background = element_rect(fill = 'white', colour = 'black'))
-dev.off()
+}
 
 # Visualization 3: By call
 data_alt <- data[which(data$V3=='alt'),]#it doesn't matter if we take mqual or qual, we just want to make sure we only take one
