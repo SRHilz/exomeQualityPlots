@@ -17,12 +17,16 @@ if("RColorBrewer" %in% rownames(installed.packages()) == FALSE) {
 if("gtools" %in% rownames(installed.packages()) == FALSE) {
   install.packages("gtools", repos="http://cran.rstudio.com/")
 }
+if("reshape" %in% rownames(installed.packages()) == FALSE) {
+  install.packages("reshape2", repos="http://cran.rstudio.com/")
+}
 library(dplyr)
 library(plyr)
 library(scales)
 library(ggplot2)
 library(RColorBrewer)
 library(gtools)
+library(reshape2)
 
 extractMuts <- function(variantID){
   s <- strsplit(variantID, "_")
@@ -369,6 +373,10 @@ if (!length(notFound) == length(drivers)){
 legend('topright',notFound,lty=1,cex=.8,col="white",bty='n', title="Not present:", y.intersp=.8)
 dev.off()
 #PCA
+vafs <- dcast(info,gene~sampleID, value.var="vaf")
+rownames(vafs) <- vafs$gene
+vafs$gene <- NULL
+vafs <- as.matrix(vafs)
 pdf(paste(patientID,"_qualplots/VAFPatterns/pca.pdf", sep=""))
 nrm_count_matrix=as.matrix(vafs)
 log=log10(1+nrm_count_matrix)
