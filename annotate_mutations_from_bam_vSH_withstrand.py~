@@ -65,7 +65,7 @@ def get_samples_from_patient(mutfile, conversionfile, patient_ID, projectname, b
         #    fileheader = ".merged.sorted"
 
         #bamfile = fullpath + line.strip().split()[col_lib] + fileheader + ".bam"
-        bamfile = bamPath+'/'+patient_ID+'/'+line.strip().split('\t')[col_lib]+'.bwa.realigned.rmDups.recal.bam'
+        bamfile = bamPath+'/'+patient_ID+'/'+line.strip().split('\t')[col_lib]+'-trim.bwa.realigned.rmDups.recal.bam'
         print bamfile
 
         annotate_mutations_from_bam(mutfile, bamfile, sample, qualFile)
