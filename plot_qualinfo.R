@@ -76,12 +76,11 @@ args = commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
   stop("Usage: Rscript --vanilla plot_qualinfo.R <patient ID> <path to quality info file> <path to mutations.R file>", call.=FALSE)
 }
-patientID <-args[1] 
-qualinfofile <-args[2]# paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.qualityinfo.txt')
- # #
-mutationsfile <- args[3]#paste0('/Users/srhilz/Documents/Professional/Positions/UCSF_Costello/Data/',patientID,'/Variants/',patientID,'.R.mutations.txt') # 
+patientID <- args[1] 
+qualinfofile <- args[2]
+mutationsfile <- args[3]
 
-# Hardcoded settings ordering mutational spectra output
+# Hardcoded settings (cutoffs, ordering mutational spectra output, qualstats file name)
 substitutions <- c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A')
 substitutionsColor <- brewer.pal(12,'Set3')
 substitutionsColorset <- c('A>C'=substitutionsColor[1],'T>G'=substitutionsColor[2],'A>G'=substitutionsColor[3],'T>C'=substitutionsColor[4],'A>T'=substitutionsColor[5],'T>A'=substitutionsColor[6],'C>G'=substitutionsColor[7],'G>C'=substitutionsColor[8],'C>A'=substitutionsColor[9],'G>T'=substitutionsColor[10],'C>T'=substitutionsColor[11],'G>A'=substitutionsColor[12])
@@ -93,9 +92,15 @@ trinucleotideColor <- colorRampPalette(brewer.pal(12, "Set3"))(16)
 trinucleotideColorset <- c('ANA'=trinucleotideColor[1],'ANC'=trinucleotideColor[2],'ANG'=trinucleotideColor[3],'ANT'=trinucleotideColor[4],'CNA'=trinucleotideColor[5],'CNC'=trinucleotideColor[6],'CNG'=trinucleotideColor[7],'CNT'=trinucleotideColor[8],'GNA'=trinucleotideColor[9],'GNC'=trinucleotideColor[10],'GNG'=trinucleotideColor[11],'GNT'=trinucleotideColor[12],'TNA'=trinucleotideColor[13],'TNC'=trinucleotideColor[14],'TNG'=trinucleotideColor[15],'TNT'=trinucleotideColor[16])
 qual_cutoff <- 20
 mqual_cutoff <- 0
+qualitystatsFileName <- paste0(patientID,".qualitystats.txt")
+
 
 # Create master output directory
 dir.create(paste(patientID,'_qualplots',sep=''),showWarnings = FALSE)
+
+# Create construct to append quality stats for each called variant to, to be output to qualitystatsFileName
+qualitystatsHeader <- c('chr','start','end','subs','called_sample','avg_basequal','avg_mapqual','avg_alt_basequal','avg_alt_mapqual','wilcox_p_basequal','wilcox_p_mapqual')
+qualitystats = c(qualitystatsHeader)
 
 # Read in data and produce variant list and samples list
 data <- read.table(qualinfofile, header=FALSE)  
@@ -103,7 +108,7 @@ samples <- mixedsort(as.character(unique(data$V4)))
 variants <- as.vector(unique(data$V5))
 data$V4 <- factor(data$V4, levels = as.factor(samples))#orders samples by mixedsort
 
-# Read in mutations.R file, that will be used to generate the annotated mutations.R file
+# Read in mutations.R file, that will be used to generate the call stats file
 mutationdata <- read.table(mutationsfile, header=TRUE, sep='\t', comment.char="")
 mutationdata <- mutationdata[which(mutationdata$algorithm=='MuTect'),]
 mutationdata <- mutationdata[,c(1:9,dim(mutationdata)[2])]
@@ -124,7 +129,6 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
   # create additional collapsed forms of data (counts of alt and ref for each vairant + sample)
   data_allcounts <- count(data[,3:5], vars = c("V3","V4","V5"))
   data_highqualcounts <- count(data_filtered[,3:5], vars = c("V3","V4","V5"))
-  
   # set plot parameters
   plot_nrows = 4
   if(length(samples)%%4 == 0){
@@ -135,7 +139,20 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
     allaltcounts <- 0
     pdf(paste(patientID,"_qualplots/variantQuality/",variants[i],".pdf", sep=""))
     par(mfrow=c(plot_nrows, plot_ncols),mar=rep(2,4))
+    # break down variant name (used as locus info to pipe into advancedVariantFiltering)
+    splitString <- strsplit(variants[i],'_') %>% unlist
+    var_chromosome <- splitString[2]
+    var_start <- substr(splitString[3],2,nchar(splitString[3])-1)
+    var_end <- as.numeric(substr(splitString[3],2,nchar(splitString[3])-1))+1
+    var_subs <- paste0(substr(splitString[3],1,1),'>',substr(splitString[3],nchar(splitString[3]),nchar(splitString[3])))
+    #go through each sample
     for (j in 1:length(samples)){
+      # calc average qual and mqual for all reads at variant locus for sample
+      allqual <- data[which(data$V4==samples[j] & data$V5==variants[i]),]$V1
+      allmqual <- data[which(data$V4==samples[j] & data$V5==variants[i]),]$V2
+      var_avgqual <- mean(allqual)
+      var_avgmqual <- mean(allmqual)
+      sampleQualitystats <- c(var_chromosome,var_start,var_end,var_subs,samples[j],var_avgqual,var_avgmqual)
       plot(1, type="n", xlab="", ylab="",  xlim=c(0,70), ylim=c(0, .5), main=samples[j])
       if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
         refqual <- data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1
@@ -146,11 +163,18 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
       if (length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
         altqual <- data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1
         altmqual <- data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V2
+        var_avgaltqual <- mean(altqual)
+        var_avgaltmqual <- mean(altmqual)
         lines(density(altqual), col='plum1',lty=1)
         lines(density(altmqual), col='deepskyblue',lty=1)
+      } else {
+        var_avgaltqual <- 'NA'
+        var_avgalmqual <- 'NA'
       }
+      sampleQualitystats <- append(sampleQualitystats, c(var_avgaltqual,var_avgaltmqual))
       if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
         p <- wilcox.test(refqual,altqual)$p.value
+        sampleQualitystats <- append(sampleQualitystats,p)
         qualpvalue <- paste('qual p=', round(p,3), sep='')
         if(is.na(mutationdata[variants[i],]$qflag) & is.finite(p)){
           if(p<0.05){#flag
@@ -165,9 +189,11 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
         }
       } else {
         qualpvalue = 'NA'
+        sampleQualitystats <- append(sampleQualitystats,'NA')
       }
       if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V2)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V2)>1){
         p = wilcox.test(refmqual, altmqual)$p.value
+        sampleQualitystats <- append(sampleQualitystats,p)
         mqualpvalue <- paste('mqual p=', round(p,3), sep='')
         if(is.na(mutationdata[variants[i],]$mqflag) & is.finite(p)){
           if(p<0.05){#flag
@@ -182,6 +208,7 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
         }
       } else {
         mqualpvalue <- 'NA'
+        sampleQualitystats <- append(sampleQualitystats,'NA')
       }
       refCount <- 0
       altCount <- 0
@@ -293,6 +320,9 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
       text(-2,.41,OB, cex=.8, pos=4)
       text(-2,.37,qualpvalue, cex=.8, pos=4)
       text(-2,.33,mqualpvalue, cex=.8, pos=4)
+      if (unique(data[which(data$V4==samples[j] & data$V5==variants[i]),]$V11)=='Y'){#if the variant is called in the sample
+        qualitystats <- rbind(qualitystats, sampleQualitystats)
+      }
     }
     if (allaltcounts < 4){
       mutationdata[variants[i],]$fewalt = 1
@@ -300,6 +330,8 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
     dev.off()
   }
 }
+write.table(qualitystats, file=qualitystatsFileName,sep='\t', quote=FALSE, col.names=FALSE, row.names=FALSE)
+
 # OVERALL LIBRARY QUALITY PLOTS
 
 #Overall library quality comparison - quality score
