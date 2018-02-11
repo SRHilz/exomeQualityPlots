@@ -2,7 +2,7 @@
 
 The current setup is to run code in three steps per patient.
 
-#### 1. Generate coverage distribution files, which are later used in Step #3 to generate read coverage plots for each library.
+#### 1. Generate coverage distribution files, which are used in Step #3 to generate read coverage plots for each library.
 
 The script used for this step is:
 
@@ -20,7 +20,7 @@ qsub -l vmem=300gb -v patient=$patient,bedpath=/home/shilz/database/exomeKitBeds
 
 If successful, should output a file for each library (including normal) of non-zero size with the extension .hist.
 
-#### 2. Collect quality information for each position where a mutation was called. This step can be performed in parallel with Step 1.
+#### 2. Collect quality information for each position where a mutation was called, which are used in Step #3 to generate quality plots. This step can be performed in parallel with Step 1.
 
 The script used for this step is:
 
@@ -38,7 +38,7 @@ qsub -l vmem=96gb -v mutationfile=/costellolab/jocostello/LG3/MutInDel/$patient.
 
 If successful, should output a file called ${patient}.qualityinfo.tmp
 
-#### 3. Make final quality plots.
+#### 3. Make final quality plots using files generated in Steps 1 and 2.
 
 The script used for this step is:
 
