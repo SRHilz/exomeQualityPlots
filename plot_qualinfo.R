@@ -169,7 +169,7 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
         lines(density(altmqual), col='deepskyblue',lty=1)
       } else {
         var_avgaltqual <- 'NA'
-        var_avgalmqual <- 'NA'
+        var_avgaltmqual <- 'NA'
       }
       sampleQualitystats <- append(sampleQualitystats, c(var_avgaltqual,var_avgaltmqual))
       if (length(data[which(data$V3=='ref' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1 & length(data[which(data$V3=='alt' & data$V4==samples[j] & data$V5==variants[i]),]$V1)>1){
