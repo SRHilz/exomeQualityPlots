@@ -76,9 +76,9 @@ args = commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
   stop("Usage: Rscript --vanilla plot_qualinfo.R <patient ID> <path to quality info file> <path to mutations.R file>", call.=FALSE)
 }
-patientID <- args[1] 
-qualinfofile <- args[2]
-mutationsfile <- args[3]
+patientID <- "Patient185"#args[1] 
+qualinfofile <- "Patient185.qualityinfo.txt"#args[2]
+mutationsfile <- "Patient185.R.mutations"#args[3]
 
 # Hardcoded settings (cutoffs, ordering mutational spectra output, qualstats file name)
 substitutions <- c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A')
@@ -409,8 +409,9 @@ vafs <- dcast(info,gene~sampleID, value.var="vaf")
 rownames(vafs) <- vafs$gene
 vafs$gene <- NULL
 vafs <- as.matrix(vafs)
+PCAvafs <- vafs[complete.cases(vafs),]
 pdf(paste(patientID,"_qualplots/VAFPatterns/pca.pdf", sep=""))
-nrm_count_matrix=as.matrix(vafs)
+nrm_count_matrix=as.matrix(PCAvafs)
 log=log10(1+nrm_count_matrix)
 tlog=t(log)
 pca=prcomp(tlog)
