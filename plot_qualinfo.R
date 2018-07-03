@@ -76,9 +76,9 @@ args = commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
   stop("Usage: Rscript --vanilla plot_qualinfo.R <patient ID> <path to quality info file> <path to mutations.R file>", call.=FALSE)
 }
-patientID <- "Patient185"#args[1] 
-qualinfofile <- "Patient185.qualityinfo.txt"#args[2]
-mutationsfile <- "Patient185.R.mutations"#args[3]
+patientID <- args[1] 
+qualinfofile <- args[2]
+mutationsfile <- args[3]
 
 # Hardcoded settings (cutoffs, ordering mutational spectra output, qualstats file name)
 substitutions <- c('A>C','T>G','A>G','T>C','A>T','T>A','C>G','G>C','C>A','G>T','C>T','G>A')
@@ -320,7 +320,7 @@ if (length(variants) <= 300){#this makes sure this section of code, which is com
       text(-2,.41,OB, cex=.8, pos=4)
       text(-2,.37,qualpvalue, cex=.8, pos=4)
       text(-2,.33,mqualpvalue, cex=.8, pos=4)
-      if (unique(data[which(data$V4==samples[j] & data$V5==variants[i]),]$V11)=='Y'){#if the variant is called in the sample
+      if (nrow(unique(data[which(data$V4==samples[j] & data$V5==variants[i] & data$V11=='Y'),]))>0){#if the variant is called in the sample
         qualitystats <- rbind(qualitystats, sampleQualitystats)
       }
     }
